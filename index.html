@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Questions Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff0db;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden; /* Ensures video stays within bounds */
+        }
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1; /* Puts the video behind other content */
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.85); /* Transparent background */
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 600px;
+            padding: 25px;
+            text-align: center;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 1; /* Ensures content stays on top of the video */
+        }
+        .question-card {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f9f5f0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        .button {
+            background-color: #e57373;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .button:hover {
+            background-color: #c62828;
+        }
+        .button:active {
+            transform: scale(0.98);
+        }
+        .name-form input {
+            font-size: 1.2em;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            width: calc(100% - 22px);
+        }
+        .name-form button {
+            background-color: #e57373;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .name-form button:hover {
+            background-color: #c62828;
+        }
+        .name-form button:active {
+            transform: scale(0.98);
+        }
+        @media (max-width: 600px) {
+            .button, .name-form button {
+                font-size: 1em;
+                padding: 10px 20px;
+            }
+            .question-card {
+                font-size: 1em;
+                padding: 15px;
+            }
+        }
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .back-button {
+            background-color: #e57373;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            text-decoration: none; /* Remove underline */
+            font-size: 1.2em;
+            display: inline-block;
+            margin-left: 10px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        
+        .back-button:hover {
+            background-color: #c62828;
+        }
+        
+        .back-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+  <video class="video-background" src="C:\Users\User\Desktop\In-Dine\Background\Vid1.mp4" autoplay muted loop></video>
+
+    <div class="container">
+        <div id="name-form" class="name-form">
+            <h2>Enter Player Names</h2>
+            <div class="player-inputs" id="player-inputs"></div>
+            <button id="add-player-button">Add Player</button>
+            <button id="start-button">Start Game</button>
+        </div>
+        <div class="question-card" id="question-card">
+            <!-- Question will be inserted here -->
+        </div>
+        <div class="button-container">
+            <button class="button" id="next-button">Next Question</button>
+            <button class="button" id="restart-button" style="display: none;">Restart Game</button>
+            <a href="https://in-dineentertainment.bubbleapps.io/version-test/games?debug_mode=true" class="back-button">Back to Home</a> <!-- Back button -->
+        </div>
+    </div>
+    </div>
+
+    <script>
+        const questions = [
+            "What is your favorite hobby, [name]?",
+            "If you could travel anywhere, where would it be, [name]?",
+            "What is your favorite memory, [name]?",
+            "If you could have any superpower, what would it be, [name]?",
+            "What is something new you've learned recently, [name]?",
+            "What is one thing you can't live without, [name]?",
+            "If you could meet any famous person, who would it be, [name]?",
+            "What makes you the happiest, [name]?",
+            "If you could go back in time, what era would you visit, [name]?",
+            "What is your dream job, [name]?"
+        ];
+
+        let currentQuestionIndex = 0;
+        let playerNames = [];
+        let currentPlayerIndex = 0;
+
+        const playerInputsContainer = document.getElementById('player-inputs');
+        const nameForm = document.getElementById('name-form');
+        const startButton = document.getElementById('start-button');
+        const addPlayerButton = document.getElementById('add-player-button');
+        const questionCard = document.getElementById('question-card');
+        const nextButton = document.getElementById('next-button');
+        const restartButton = document.getElementById('restart-button');
+
+        // Add initial player input
+        addPlayerInput();
+
+        // Add a new player input field when "Add Player" is clicked
+        addPlayerButton.addEventListener('click', addPlayerInput);
+
+        // Start game when all names are entered
+        startButton.addEventListener('click', () => {
+            const inputs = document.querySelectorAll('.player-input');
+            playerNames = Array.from(inputs).map(input => input.value.trim()).filter(name => name);
+            
+            if (playerNames.length < 2) {
+                alert("Please add at least two players.");
+                return;
+            }
+
+            nameForm.style.display = 'none';
+            questionCard.style.display = 'block';
+            nextButton.style.display = 'block';
+            restartButton.style.display = 'block';
+            showQuestion();
+        });
+
+        // Show the next question for the next player
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+            currentPlayerIndex = (currentPlayerIndex + 1) % playerNames.length;
+            showQuestion();
+        });
+
+        // Restart game logic
+        restartButton.addEventListener('click', () => {
+            restartGame();
+        });
+
+        // Function to add a player input
+        function addPlayerInput() {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = `Player ${playerInputsContainer.children.length + 1} Name`;
+            input.className = 'player-input';
+            playerInputsContainer.appendChild(input);
+        }
+
+        // Function to show a personalized question
+        function showQuestion() {
+            const playerName = playerNames[currentPlayerIndex];
+            let personalizedQuestion = questions[currentQuestionIndex].replace('[name]', playerName);
+            questionCard.textContent = personalizedQuestion;
+        }
+
+        // Function to restart the game
+        function restartGame() {
+            // Reset all variables
+            currentQuestionIndex = 0;
+            currentPlayerIndex = 0;
+            playerNames = [];
+
+            // Clear the inputs
+            playerInputsContainer.innerHTML = '';
+            addPlayerInput();
+
+            // Reset the display
+            nameForm.style.display = 'block';
+            questionCard.style.display = 'none';
+            nextButton.style.display = 'none';
+            restartButton.style.display = 'none';
+        }
+
+        // Initial state
+        questionCard.style.display = 'none';
+        nextButton.style.display = 'none';
+        restartButton.style.display = 'none';
+    </script>
+</body>
+</html>
